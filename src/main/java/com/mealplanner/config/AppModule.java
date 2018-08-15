@@ -4,6 +4,7 @@ import javax.inject.Singleton;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.mealplanner.function.ListMealsHandler;
 
 import dagger.Module;
 import dagger.Provides;
@@ -15,11 +16,19 @@ public class AppModule {
 
     @Provides
     @Singleton
-    public AmazonDynamoDB providesAmazonDynamoDB() {
+    public AmazonDynamoDB providesAmazonDynamoDB(final EnvironmentConfig envConfig) {
         return AmazonDynamoDBClientBuilder.standard()
-                .withRegion(AWS_REGION)
+                .withRegion(envConfig.getAwsRegion())
                 .build();
     }
+
+    @Provides
+    @Singleton
+    public ListMealsHandler providesListMealsHandler() {
+        return new ListMealsHandler();
+    }
+
+    //create class for getting AWS config which can be replaced by a rule in tests
 
     //    @Provides
     //    @Singleton
