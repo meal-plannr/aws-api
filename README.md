@@ -19,7 +19,7 @@ The integration tests rely on [Localstack](https://github.com/localstack/localst
 
 2. Start Localstack
 
-   `ENTRYPOINT=-d SERVICES=dynamodb localstack start --docker`
+   `ENTRYPOINT=-d SERVICES=dynamodb,kinesis localstack start --docker`
 
    `ENTRYPOINT=-d` runs Localstack as a daemon in the background
 
