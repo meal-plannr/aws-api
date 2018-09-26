@@ -1,0 +1,6 @@
+Resources:
+    SavedMealsStream:
+      Type: AWS::Kinesis::Stream
+      Properties:
+        Name: ${self:custom.stage}-saved-meals
+        ShardCount: 1

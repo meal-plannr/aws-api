@@ -22,6 +22,8 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.PaginatedQueryList;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.kinesis.AmazonKinesis;
+import com.mealplanner.config.PropertiesService;
 import com.mealplanner.dal.DynamoDbFactory;
 import com.mealplanner.dal.MealRepository;
 import com.mealplanner.domain.Meal;
@@ -41,6 +43,12 @@ public class MealRepositoryTest {
 
     @Mock
     private DynamoDbFactory<Meal> dynamoDbFactory;
+
+    @Mock
+    private AmazonKinesis kinesisClient;
+
+    @Mock
+    private PropertiesService propertiesService;
 
     @Mock
     private PaginatedQueryList<Meal> paginatedQueryList;
