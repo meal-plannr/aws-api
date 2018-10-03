@@ -98,6 +98,7 @@ workflows:
             branches:
               only:
                 - master
+                - upgrade-to-aws-sdk-2
       - dev-deploy:
           requires:
             - build
