@@ -1,22 +1,20 @@
 package com.mealplanner.config;
 
-import javax.inject.Named;
+import java.net.URI;
+
 import javax.inject.Singleton;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
-import com.mealplanner.dal.DynamoDbAdapter;
-import com.mealplanner.dal.DynamoDbFactory;
-import com.mealplanner.domain.Meal;
-
 import dagger.Module;
 import dagger.Provides;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.http.SdkHttpClient;
+import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClientBuilder;
 
 @Module
 public class DaoModule {
@@ -25,21 +23,23 @@ public class DaoModule {
 
     @Singleton
     @Provides
-    public AmazonDynamoDB amazonDynamoDb(final PropertiesService properties) {
+    public DynamoDbClient amazonDynamoDb(final PropertiesService properties, final SdkHttpClient httpClient,
+            final AwsCredentialsProvider environmentCredentialsProvider) {
         LOGGER.debug("Creating AmazonDynamoDB instance");
 
-        final AmazonDynamoDBClientBuilder builder = AmazonDynamoDBClientBuilder.standard();
+        final DynamoDbClientBuilder builder = DynamoDbClient.builder();
 
-        final String awsRegion = properties.getAwsRegion();
         final String endpoint = properties.getDynamoEndpoint();
         if ((endpoint != null) && !endpoint.isEmpty()) {
-            builder.withEndpointConfiguration(new EndpointConfiguration(endpoint, awsRegion));
+            builder.endpointOverride(URI.create(endpoint));
         } else {
-            builder.withRegion(awsRegion);
-
+            builder.region(properties.getAwsRegion());
         }
 
-        final AmazonDynamoDB dynamoDB = builder.build();
+        builder.httpClient(httpClient);
+        builder.credentialsProvider(environmentCredentialsProvider);
+
+        final DynamoDbClient dynamoDB = builder.build();
         LOGGER.debug("Finished creating AmazonDynamoDB");
 
         return dynamoDB;
@@ -47,26 +47,19 @@ public class DaoModule {
 
     @Singleton
     @Provides
-    @Named("mealsDynamoDbMapper")
-    public DynamoDBMapper mealsDynamoDbMapper(final PropertiesService propertiesService, final DynamoDbAdapter dynamoDbAdapter) {
-        LOGGER.debug("Creating mealsDynamoDbMapper instance");
-
-        final DynamoDBMapperConfig mapperConfig = DynamoDBMapperConfig.builder()
-                .withTableNameOverride(new DynamoDBMapperConfig.TableNameOverride(propertiesService.getMealsTableName()))
-                .build();
-
-        final DynamoDBMapper mealsMapper = dynamoDbAdapter.createDbMapper(mapperConfig);
-        LOGGER.debug("Finished creating mealsDynamoDbMapper instance");
-        return mealsMapper;
+    public SdkHttpClient httpClient() {
+        LOGGER.debug("Creating UrlConnectionHttpClient");
+        final SdkHttpClient httpClient = UrlConnectionHttpClient.builder().build();
+        LOGGER.debug("Finished creating UrlConnectionHttpClient");
+        return httpClient;
     }
 
     @Singleton
     @Provides
-    @Named("mealsDynamoDbFactory")
-    public DynamoDbFactory<Meal> dynamoDbFactory() {
-        LOGGER.debug("Creating mealsDynamoDbFactory instance");
-        final DynamoDbFactory<Meal> mealsDynamoDbFactory = new DynamoDbFactory<>();
-        LOGGER.debug("Finished creating mealsDynamoDbFactory instance");
-        return mealsDynamoDbFactory;
+    public AwsCredentialsProvider environmentCredentialsProvider() {
+        LOGGER.debug("Creating EnvironmentVariableCredentialsProvider");
+        final EnvironmentVariableCredentialsProvider provider = EnvironmentVariableCredentialsProvider.create();
+        LOGGER.debug("Finished creating EnvironmentVariableCredentialsProvider");
+        return provider;
     }
 }

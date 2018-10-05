@@ -13,6 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.mealplanner.config.Environment;
 import com.mealplanner.config.PropertiesService;
 
+import software.amazon.awssdk.regions.Region;
+
 @ExtendWith(MockitoExtension.class)
 public class PropertiesServiceTest {
 
@@ -21,7 +23,7 @@ public class PropertiesServiceTest {
 
     @BeforeAll
     public static void setEnvVars() {
-        ENVIRONMENT_VARIABLES.set("region", "my-region");
+        ENVIRONMENT_VARIABLES.set("region", Region.AWS_GLOBAL.id());
         ENVIRONMENT_VARIABLES.set("tableName", "the-table");
     }
 
@@ -30,7 +32,7 @@ public class PropertiesServiceTest {
         final PropertiesService service = new PropertiesService(Environment.PRODUCTION);
 
         final Properties props = new Properties.Builder()
-                .awsRegion("my-region")
+                .awsRegion(Region.AWS_GLOBAL)
                 .mealsTableName("the-table")
                 .dynamoEndpoint(null)
                 .isLocalEnvironment(false)
@@ -43,7 +45,7 @@ public class PropertiesServiceTest {
         final PropertiesService service = new PropertiesService(Environment.CI);
 
         final Properties props = new Properties.Builder()
-                .awsRegion("eu-west-2")
+                .awsRegion(Region.EU_WEST_2)
                 .mealsTableName("ci-meals")
                 .dynamoEndpoint(null)
                 .isLocalEnvironment(false)
@@ -56,7 +58,7 @@ public class PropertiesServiceTest {
         final PropertiesService service = new PropertiesService(Environment.LOCAL);
 
         final Properties props = new Properties.Builder()
-                .awsRegion("eu-west-1")
+                .awsRegion(Region.EU_WEST_1)
                 .mealsTableName("meals")
                 .dynamoEndpoint("http://localhost:4569")
                 .isLocalEnvironment(true)
@@ -72,7 +74,7 @@ public class PropertiesServiceTest {
     }
 
     static class Properties {
-        private final String awsRegion;
+        private final Region awsRegion;
         private final String mealsTableName;
         private final String dynamoEndpoint;
         private final boolean isLocalEnvironment;
@@ -84,7 +86,7 @@ public class PropertiesServiceTest {
             this.isLocalEnvironment = builder.isLocalEnvironment;
         }
 
-        public String getAwsRegion() {
+        public Region getAwsRegion() {
             return awsRegion;
         }
 
@@ -101,12 +103,12 @@ public class PropertiesServiceTest {
         }
 
         static class Builder {
-            private String awsRegion;
+            private Region awsRegion;
             private String mealsTableName;
             private String dynamoEndpoint;
             private boolean isLocalEnvironment;
 
-            public Builder awsRegion(final String awsRegion) {
+            public Builder awsRegion(final Region awsRegion) {
                 this.awsRegion = awsRegion;
                 return this;
             }

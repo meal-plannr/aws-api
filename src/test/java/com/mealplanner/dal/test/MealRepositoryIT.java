@@ -9,10 +9,11 @@ import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.mealplanner.dal.MealRepository;
 import com.mealplanner.domain.Meal;
 import com.mealplanner.test.IntegrationTestBase;
+
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 
 public class MealRepositoryIT extends IntegrationTestBase {
 

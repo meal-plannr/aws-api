@@ -10,6 +10,8 @@ import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import software.amazon.awssdk.regions.Region;
+
 @Singleton
 public class PropertiesService {
 
@@ -63,8 +65,8 @@ public class PropertiesService {
         }
     }
 
-    public String getAwsRegion() {
-        return props.getProperty(AWS_REGION);
+    public Region getAwsRegion() {
+        return Region.of(props.getProperty(AWS_REGION));
     }
 
     public String getMealsTableName() {

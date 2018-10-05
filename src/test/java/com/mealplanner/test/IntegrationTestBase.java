@@ -1,28 +1,27 @@
 package com.mealplanner.test;
 
+import java.util.Map;
+
 import javax.inject.Inject;
-import javax.inject.Named;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.BeforeEach;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig.SaveBehavior;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
-import com.amazonaws.services.dynamodbv2.datamodeling.PaginatedScanList;
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.KeyType;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
-import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
-import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.mealplanner.config.PropertiesService;
 import com.mealplanner.dal.MealRepository;
-import com.mealplanner.domain.Meal;
+
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughput;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
 public class IntegrationTestBase {
 
@@ -39,11 +38,7 @@ public class IntegrationTestBase {
     PropertiesService properties;
 
     @Inject
-    protected AmazonDynamoDB amazonDynamoDb;
-
-    @Inject
-    @Named("mealsDynamoDbMapper")
-    DynamoDBMapper mealsMapper;
+    protected DynamoDbClient amazonDynamoDb;
 
     public IntegrationTestBase() {
         appComponent = DaggerAppTestComponent.builder().build();
@@ -69,25 +64,31 @@ public class IntegrationTestBase {
 
         final String mealsTableName = properties.getMealsTableName();
 
-        TableUtils.createTableIfNotExists(amazonDynamoDb, new CreateTableRequest()
-                .withTableName(mealsTableName)
-                .withKeySchema(
-                        new KeySchemaElement()
-                                .withKeyType(KeyType.HASH)
-                                .withAttributeName("userId"),
-                        new KeySchemaElement()
-                                .withKeyType(KeyType.RANGE)
-                                .withAttributeName("mealId"))
-                .withAttributeDefinitions(
-                        new AttributeDefinition()
-                                .withAttributeName("userId")
-                                .withAttributeType(ScalarAttributeType.S),
-                        new AttributeDefinition()
-                                .withAttributeName("mealId")
-                                .withAttributeType(ScalarAttributeType.S))
-                .withProvisionedThroughput(new ProvisionedThroughput()
-                        .withReadCapacityUnits(1L)
-                        .withWriteCapacityUnits(1L)));
+        TableUtils.createTableIfNotExists(amazonDynamoDb, CreateTableRequest.builder()
+                .tableName(mealsTableName)
+                .keySchema(
+                        KeySchemaElement.builder()
+                                .keyType(KeyType.HASH)
+                                .attributeName("userId")
+                                .build(),
+                        KeySchemaElement.builder()
+                                .keyType(KeyType.RANGE)
+                                .attributeName("mealId")
+                                .build())
+                .attributeDefinitions(
+                        AttributeDefinition.builder()
+                                .attributeName("userId")
+                                .attributeType(ScalarAttributeType.S)
+                                .build(),
+                        AttributeDefinition.builder()
+                                .attributeName("mealId")
+                                .attributeType(ScalarAttributeType.S)
+                                .build())
+                .provisionedThroughput(ProvisionedThroughput.builder()
+                        .readCapacityUnits(1L)
+                        .writeCapacityUnits(1L)
+                        .build())
+                .build());
 
         TableUtils.waitUntilActive(amazonDynamoDb, mealsTableName, 5000, 100);
 
@@ -97,13 +98,16 @@ public class IntegrationTestBase {
     private void deleteMeals() {
         LOGGER.debug("Deleting all meals");
 
-        final DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
-        final PaginatedScanList<Meal> result = mealsMapper.scan(Meal.class, scanExpression);
-        for (final Meal meal : result) {
-            mealsMapper.delete(meal,
-                    new DynamoDBMapperConfig.Builder()
-                            .withSaveBehavior(SaveBehavior.CLOBBER)
-                            .build());
+        final ScanResponse response = amazonDynamoDb.scan(ScanRequest.builder()
+                .tableName(properties.getMealsTableName())
+                .attributesToGet("mealId", "userId")
+                .build());
+
+        for (final Map<String, AttributeValue> entity : response.items()) {
+            amazonDynamoDb.deleteItem(DeleteItemRequest.builder()
+                    .tableName(properties.getMealsTableName())
+                    .key(entity)
+                    .build());
         }
     }
 }
